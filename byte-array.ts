@@ -19,10 +19,14 @@ export class ByteArray extends Uint8ClampedArray {
 
     static from_bytes(value: ArrayLike<number>): ByteArray {
         const array = new ByteArray(value.length);
-        array.set(value, 0, value.length);
+        array.set(value);
         return array;
     }
 
+    override set(value: boolean, offset?: number, length?: number): void;
+    override set(value: number, offset?: number, length?: number): void;
+    override set(value: string, offset?: number, length?: number): void;
+    override set(value: ArrayLike<number>, offset?: number): void;
     override set(
         value: boolean | number | string | ArrayLike<number>,
         offset: number = 0,
@@ -60,6 +64,34 @@ export class ByteArray extends Uint8ClampedArray {
         return sub;
     }
 
+    chunk_map<T>(
+        chunk_size: number,
+        callback: (chunk: ByteArray, i: number) => T,
+    ): T[] {
+        const result = [];
+        for (let i = 0; i < this.length; i += chunk_size) {
+            const chunk = this.sub(i, i + chunk_size);
+            result.push(callback(chunk, i));
+        }
+        return result;
+    }
+
+    chunk_bits<T>(
+        bit_depth: number,
+        callback: (bits: number, i: number) => T,
+    ): T[] {
+        const result = [];
+        const bit_mask = 1 << bit_depth;
+        for (let i = 0; i < this.length; i++) {
+            const byte = this.byte(i);
+            for (let b = 0; b < 8; b += bit_depth) {
+                const bits = (byte << b) & bit_mask;
+                result.push(callback(bits, i * 8 / bit_depth + b));
+            }
+        }
+        return result;
+    }
+
     boolean(offset: number = 0): boolean {
         return this[offset] > 0;
     }
@@ -91,9 +123,9 @@ export class ByteArray extends Uint8ClampedArray {
     }
 
     override toString(): string {
-        const row_padding = Math.ceil(Math.log2(this.length + 1) / 4);
+        const row_padding = Math.ceil(Math.log2(this.length / 16 + 1) / 4);
         let string = '';
-        for (let y = 0; y * 16 <= this.length; y++) {
+        for (let y = 0; y === 0 || y * 16 < this.length; y++) {
             const row = this.sub(y * 16, (y + 1) * 16).to_array();
             string += y.toString(16).padStart(row_padding, '0') + 'h: ';
             string += row

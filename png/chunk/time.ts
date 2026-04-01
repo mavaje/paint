@@ -9,14 +9,14 @@ export class Time extends Chunk<ChunkType.TIME> {
         super(ChunkType.TIME);
     }
 
-    static from_data_bytes(bytes: ByteArray): Time {
+    static from_data_bytes(data: ByteArray): Time {
         const epoch = Date.UTC(
-            bytes.integer(0, 2),
-            bytes.byte(2),
-            bytes.byte(3),
-            bytes.byte(4),
-            bytes.byte(5),
-            bytes.byte(6),
+            data.integer(0, 2),
+            data.byte(2),
+            data.byte(3),
+            data.byte(4),
+            data.byte(5),
+            data.byte(6),
         );
 
         return new Time(new Date(epoch));

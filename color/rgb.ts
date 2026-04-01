@@ -7,6 +7,7 @@ import {LMS} from "./lms";
 import {CIEXYZ} from "./ciexyz";
 import {CIELAB} from "./cielab";
 import {mat3x3} from "../vector/matrix";
+import {Greyscale} from "./greyscale";
 
 export class RGB extends Color {
 
@@ -22,8 +23,8 @@ export class RGB extends Color {
         return new RGB(rgb, 'rgb');
     }
 
-    static from_bytes(rgb: number[]): RGB {
-        return RGB.from(rgb.map(Color.byte_to_scalar));
+    static from_bytes(rgb: ArrayLike<number>): RGB {
+        return RGB.from(Array.from(rgb, Color.byte_to_scalar));
     }
 
     static from_hex(hex: string): RGB {
@@ -93,6 +94,14 @@ export class RGB extends Color {
                 [0,       0.01,   0.99],
             ]).multiply(this.map_color(Color.to_linear)),
             this.alpha,
+        ]);
+    }
+
+    override greyscale(): Greyscale {
+        const [r, g, b, a] = this;
+        return Greyscale.from([
+            0.299 * r + 0.587 * g + 0.114 * b,
+            a,
         ]);
     }
 

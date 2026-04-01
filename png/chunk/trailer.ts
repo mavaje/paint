@@ -1,10 +1,14 @@
 import {Chunk, ChunkType} from "./chunk";
 import {ByteArray} from "../../byte-array";
 
-export class End extends Chunk<ChunkType.END> {
+export class Trailer extends Chunk<ChunkType.TRAILER> {
 
     constructor() {
-        super(ChunkType.END);
+        super(ChunkType.TRAILER);
+    }
+
+    static from_data_bytes(): Trailer {
+        return new Trailer();
     }
 
     data_bytes(): ByteArray {

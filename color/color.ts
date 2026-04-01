@@ -7,10 +7,13 @@ import {Oklch} from "./oklch";
 import {LMS} from "./lms";
 import {CIEXYZ} from "./ciexyz";
 import {Vector3} from "../vector/vector";
+import {clamp} from "../math";
+import {Greyscale} from "./greyscale";
 
 export type ColorSpaceMap = {
     cielab: CIELAB,
     ciexyz: CIEXYZ,
+    greyscale: Greyscale,
     hsl: HSL,
     hsv: HSV,
     lms: LMS,
@@ -21,14 +24,7 @@ export type ColorSpaceMap = {
 
 export type ColorSpace = keyof ColorSpaceMap;
 
-
 export abstract class Color<S extends ColorSpace = ColorSpace> extends Array<number> {
-
-    declare 0: number;
-    declare 1: number;
-    declare 2: number;
-    declare 3: number;
-    declare length: 4;
 
     public readonly space: S;
 
@@ -37,33 +33,64 @@ export abstract class Color<S extends ColorSpace = ColorSpace> extends Array<num
     }
 
     protected constructor(values: number[], space: S) {
-        const [v1 = 0, v2 = 0, v3 = 0, alpha = 0] = Array.isArray(values) ? values : [];
-        super(v1, v2, v3, alpha);
+        const [x = 0, y = 0, z = 0, a = 0] = Array.isArray(values) ? values : [];
+        super(x, y, z, a);
         this.space = space;
     }
 
-    protected static scalar_to_byte(scalar: number): number {
-        return Math.max(0, Math.min(Math.floor(scalar * 256), 255));
+    static scalar_to_bits(scalar: number, bit_depth: number): number {
+        return clamp(Math.floor(scalar * (1 << bit_depth)), 0, (1 << bit_depth) - 1);
     }
 
-    protected static scalar_to_hex(scalar: number): string {
+    static scalar_to_byte(scalar: number): number {
+        return this.scalar_to_bits(scalar, 8);
+    }
+
+    static scalar_to_hex(scalar: number): string {
         return Color.byte_to_hex(Color.scalar_to_byte(scalar));
     }
 
-    protected static byte_to_scalar(byte: number): number {
-        return Math.max(0, Math.min(byte / 255, 1));
+    static bits_to_scalar(bits: number, bit_depth: number): number {
+        return clamp(bits / ((1 << bit_depth) - 1), 0, 1);
     }
 
-    protected static byte_to_hex(byte: number): string {
+    static byte_to_scalar(byte: number): number {
+        return this.bits_to_scalar(byte, 8);
+    }
+
+    static byte_to_hex(byte: number): string {
         return byte.toString(16).padStart(2, '0');
     }
 
-    protected static hex_to_scalar(hex: string): number {
+    static hex_to_scalar(hex: string): number {
         return Color.byte_to_scalar(Color.hex_to_byte(hex));
     }
 
-    protected static hex_to_byte(hex: string): number {
+    static hex_to_byte(hex: string): number {
         return Number.parseInt(hex, 16) || 0;
+    }
+
+    static distance(color1: Color, color2: Color, space: ColorSpace = 'rgb'): number {
+        const [x1, y1, z1, a1] = color1.in_space(space);
+        const [x2, y2, z2, a2] = color2.in_space(space);
+        return Math.hypot(x1 - x2, y1 - y2, z1 - z2, a1 - a2);
+    }
+
+    static nearest_index(colors: Color[], color: Color, space?: ColorSpace): number {
+        let nearest: number = 0;
+        let distance: number = Infinity;
+        colors.forEach((c, i) => {
+            const d = Color.distance(c, color, space);
+            if (d < distance) {
+                nearest = i;
+                distance = d;
+            }
+        });
+        return nearest;
+    }
+
+    static nearest_color(colors: Color[], color: Color, space?: ColorSpace): Color {
+        return colors[Color.nearest_index(colors, color, space)];
     }
 
     protected static to_linear(value: number): number {
@@ -78,8 +105,24 @@ export abstract class Color<S extends ColorSpace = ColorSpace> extends Array<num
             : 1.055 * Math.pow(value, 1 / 2.4) - 0.055;
     }
 
+    is_opaque() {
+        return this.alpha === 1;
+    }
+
+    is_translucent() {
+        return this.alpha < 1;
+    }
+
+    is_transparent() {
+        return this.alpha === 0;
+    }
+
     bytes(): Vector3 {
-        return this.map(Color.scalar_to_byte);
+        return this.map(Color.scalar_to_byte) as Vector3;
+    }
+
+    bits(bit_depth: number): Vector3 {
+        return this.map(v => Color.scalar_to_bits(v, bit_depth)) as Vector3;
     }
 
     hex(): string {
@@ -106,6 +149,10 @@ export abstract class Color<S extends ColorSpace = ColorSpace> extends Array<num
 
     ciexyz(): CIEXYZ {
         return this.super_space().ciexyz();
+    }
+
+    greyscale(): Greyscale {
+        return this.super_space().greyscale();
     }
 
     hsl(): HSL {
@@ -138,10 +185,6 @@ export abstract class Color<S extends ColorSpace = ColorSpace> extends Array<num
 
     map_color(callback: (value: number, index: number) => number): this {
         return this.map((v, i) => i < 3 ? callback(v, i) : v) as this;
-    }
-
-    override map<T>(callback: (value: number, index: number, array: number[]) => T, this_arg?: any): Vector3<T> {
-        return super.map(callback, this_arg) as Vector3<T>;
     }
 
     override toString(): string {

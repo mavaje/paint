@@ -1,25 +1,29 @@
 import crc32 from "crc-32";
 
 import {ByteArray} from "../../byte-array";
+import {PNG} from "../png";
 
 export enum ChunkType {
     HEADER = 'IHDR',
     PALETTE = 'PLTE',
     IMAGE_DATA = 'IDAT',
-    END = 'IEND',
+    TRAILER = 'IEND',
     TIME = 'tIME',
+    BACKGROUND = 'bKGD',
 }
 
 export abstract class Chunk<T extends ChunkType = ChunkType> {
 
-    protected constructor(public type: T) {}
+    protected constructor(
+        public type: T,
+    ) {}
 
     static crc(bytes: ByteArray) {
         return crc32.buf(new Uint8Array(bytes)) & 0xFFFFFFFF;
     }
 
-    bytes(): ByteArray {
-        const data = this.data_bytes();
+    bytes(png: PNG): ByteArray {
+        const data = this.data_bytes(png);
         const bytes = new ByteArray(data.length + 12);
 
         bytes.set(data.length, 0, 4);
@@ -32,5 +36,5 @@ export abstract class Chunk<T extends ChunkType = ChunkType> {
         return bytes;
     }
 
-    abstract data_bytes(): ByteArray;
+    abstract data_bytes(png: PNG): ByteArray;
 }

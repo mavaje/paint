@@ -24,7 +24,7 @@ const weight_codes = {
     bold: 1,
 };
 
-const normal_colour_codes = {
+const normal_color_codes = {
     black: 30,
     red: 31,
     green: 32,
@@ -35,17 +35,17 @@ const normal_colour_codes = {
     white: 37,
 };
 
-const bright_colour_codes = Object.fromEntries(Object.entries(normal_colour_codes).map(([key, value]) => [`bright_${key}`, value + 60]));
+const bright_color_codes = Object.fromEntries(Object.entries(normal_color_codes).map(([key, value]) => [`bright_${key}`, value + 60]));
 
-const colour_alias_codes = {
-    gray: bright_colour_codes['bright_black'],
-    grey: bright_colour_codes['bright_black'],
+const color_alias_codes = {
+    gray: bright_color_codes['bright_black'],
+    grey: bright_color_codes['bright_black'],
 };
 
 const background_codes = Object.fromEntries(Object.entries({
-    ...normal_colour_codes,
-    ...bright_colour_codes,
-    ...colour_alias_codes,
+    ...normal_color_codes,
+    ...bright_color_codes,
+    ...color_alias_codes,
 }).map(([key, value]) => [`bg_${key}`, value + 10]));
 
 type Reset = keyof typeof reset_codes;
@@ -53,18 +53,18 @@ type Italic = keyof typeof italic_codes;
 type Underline = keyof typeof underline_codes;
 type Blink = keyof typeof blink_codes;
 type Weight = keyof typeof weight_codes;
-type NormalColour = keyof typeof normal_colour_codes;
-type BrightColour = `bright_${NormalColour}`;
-type NamedColour = NormalColour | BrightColour | keyof typeof colour_alias_codes;
-type Colour = NamedColour | 'fg' | 'rgb' | 'hex';
-type NamedBackground = `bg_${NamedColour}`;
+type NormalColor = keyof typeof normal_color_codes;
+type BrightColor = `bright_${NormalColor}`;
+type NamedColor = NormalColor | BrightColor | keyof typeof color_alias_codes;
+type Color = NamedColor | 'fg' | 'rgb' | 'hex';
+type NamedBackground = `bg_${NamedColor}`;
 type Background = NamedBackground | 'bg' | 'bg_rgb' | 'bg_hex';
 
 type FontSet<KS extends string, O extends string = never> = {
     [K in Exclude<KS, O>]: FansiFont<O | KS>;
 };
 
-interface ColourFunction<O extends string = never> {
+interface ColorFunction<O extends string = never> {
     (n: number): FansiFont<O>;
     (r: number, g: number, b: number): FansiFont<O>;
     (hex: string): FansiFont<O>;
@@ -73,18 +73,18 @@ interface ColourFunction<O extends string = never> {
 type RGBFunction<O extends string = never> = (r: number, g: number, b: number) => FansiFont<O>;
 type HexFunction<O extends string = never> = (hex: string) => FansiFont<O>;
 
-type FontColour<O extends string = never> = {
-    [K in Exclude<NamedColour, O>]: FansiFont<O | Colour>;
+type FontColor<O extends string = never> = {
+    [K in Exclude<NamedColor, O>]: FansiFont<O | Color>;
 } & Omit<{
-    fg: ColourFunction<O | Colour>;
-    rgb: RGBFunction<O | Colour>;
-    hex: HexFunction<O | Colour>;
+    fg: ColorFunction<O | Color>;
+    rgb: RGBFunction<O | Color>;
+    hex: HexFunction<O | Color>;
 }, O>;
 
 type FontBackground<O extends string = never> = {
     [K in Exclude<NamedBackground, O>]: FansiFont<O | Background>;
 } & Omit<{
-    bg: ColourFunction<O | Background>;
+    bg: ColorFunction<O | Background>;
     bg_rgb: RGBFunction<O | Background>;
     bg_hex: HexFunction<O | Background>;
 }, O>;
@@ -95,7 +95,7 @@ type FansiFont<O extends string = never> =
     FontSet<Underline, O> &
     FontSet<Blink, O> &
     FontSet<Weight, O> &
-    FontColour<O> &
+    FontColor<O> &
     FontBackground<O> &
     ((text: string|TemplateStringsArray, ...args: any[]) => string);
 
@@ -133,10 +133,10 @@ function make_fansi(...codes: number[]): FansiFont {
         ...underline_codes,
         ...blink_codes,
         ...weight_codes,
-        ...normal_colour_codes,
-        ...bright_colour_codes,
+        ...normal_color_codes,
+        ...bright_color_codes,
         ...background_codes,
-        ...colour_alias_codes,
+        ...color_alias_codes,
     }).forEach(([key, value]) => {
         Object.defineProperty(fansi, key, {
             get: () => make_fansi(...codes, value),
