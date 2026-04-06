@@ -3,9 +3,10 @@
     "build": "npx tsc && npx esbuild main.js --bundle --format=esm --outfile=src.js"
   },
   "devDependencies": {
-    "browserify-zlib": "^0.2.0",
+    "@types/pako": "^2.0.4",
     "crc-32": "^1.2.2",
     "esbuild": "^0.27.3",
+    "pako": "^2.1.0",
     "typescript": "^5.9.3"
   }
 }

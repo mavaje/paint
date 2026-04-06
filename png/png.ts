@@ -5,9 +5,10 @@ import {Palette} from "./chunk/palette";
 
 export class PNG {
 
-    static readonly SIGNATURE = ByteArray.from_bytes([
-        0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A,
-    ]);
+    static readonly SIGNATURE = new ByteArray(8)
+        .write([
+            0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A,
+        ]);
 
     chunks: Chunk[] = [];
     chunk_map: {
@@ -53,11 +54,7 @@ export class PNG {
 
         const bytes = new ByteArray(length);
 
-        let offset = 0;
-        chunks.forEach(chunk => {
-            bytes.set(chunk, offset);
-            offset += chunk.length;
-        });
+        chunks.forEach(chunk => bytes.write(chunk));
 
         return bytes;
     }

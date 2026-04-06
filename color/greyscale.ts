@@ -3,9 +3,12 @@ import {RGB} from "./rgb";
 
 export class Greyscale extends Color<'greyscale'> {
 
-    static override from(grey: number[]): Greyscale {
-        const [value = 0, alpha = 0] = grey;
-        return new Greyscale([value, 0, 0, alpha], "greyscale");
+    static override from(greyscale: ArrayLike<number>): Greyscale {
+        return new Greyscale(greyscale, 'greyscale');
+    }
+
+    static from_bits(greyscale: ArrayLike<number>, bit_depth: number): Color {
+        return Greyscale.from(Array.from(greyscale, c => Color.bits_to_scalar(c, bit_depth)));
     }
 
     get v() { return this[0]; }
@@ -13,7 +16,6 @@ export class Greyscale extends Color<'greyscale'> {
     get value() { return this[0]; }
 
     override rgb(): RGB {
-        const [v,,, alpha] = this;
-        return RGB.from([v, v, v, alpha]);
+        return RGB.from(this);
     }
 }

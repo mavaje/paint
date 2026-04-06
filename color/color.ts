@@ -6,7 +6,7 @@ import {Oklab} from "./oklab";
 import {Oklch} from "./oklch";
 import {LMS} from "./lms";
 import {CIEXYZ} from "./ciexyz";
-import {Vector3} from "../vector/vector";
+import {Vector} from "../vector/vector";
 import {clamp} from "../math";
 import {Greyscale} from "./greyscale";
 
@@ -24,7 +24,7 @@ export type ColorSpaceMap = {
 
 export type ColorSpace = keyof ColorSpaceMap;
 
-export abstract class Color<S extends ColorSpace = ColorSpace> extends Array<number> {
+export abstract class Color<S extends ColorSpace = ColorSpace> extends Vector<4> {
 
     public readonly space: S;
 
@@ -32,9 +32,17 @@ export abstract class Color<S extends ColorSpace = ColorSpace> extends Array<num
         return this[3];
     }
 
-    protected constructor(values: number[], space: S) {
-        const [x = 0, y = 0, z = 0, a = 0] = Array.isArray(values) ? values : [];
-        super(x, y, z, a);
+    protected constructor(values: ArrayLike<number>, space: S) {
+        if (typeof values === 'object' && 0 in values) {
+            super(
+                values[0] ?? 0,
+                values[1] ?? 0,
+                values[2] ?? 0,
+                values[3] ?? 0,
+            );
+        } else {
+            super(0, 0, 0, 0);
+        }
         this.space = space;
     }
 
@@ -43,7 +51,7 @@ export abstract class Color<S extends ColorSpace = ColorSpace> extends Array<num
     }
 
     static scalar_to_byte(scalar: number): number {
-        return this.scalar_to_bits(scalar, 8);
+        return Color.scalar_to_bits(scalar, 8);
     }
 
     static scalar_to_hex(scalar: number): string {
@@ -55,7 +63,7 @@ export abstract class Color<S extends ColorSpace = ColorSpace> extends Array<num
     }
 
     static byte_to_scalar(byte: number): number {
-        return this.bits_to_scalar(byte, 8);
+        return Color.bits_to_scalar(byte, 8);
     }
 
     static byte_to_hex(byte: number): string {
@@ -79,13 +87,14 @@ export abstract class Color<S extends ColorSpace = ColorSpace> extends Array<num
     static nearest_index(colors: Color[], color: Color, space?: ColorSpace): number {
         let nearest: number = 0;
         let distance: number = Infinity;
-        colors.forEach((c, i) => {
-            const d = Color.distance(c, color, space);
+        for (let i = 0; i < colors.length; i++) {
+            const d = Color.distance(colors[i], color, space);
+            if (d === 0) return i;
             if (d < distance) {
                 nearest = i;
                 distance = d;
             }
-        });
+        }
         return nearest;
     }
 
@@ -117,12 +126,12 @@ export abstract class Color<S extends ColorSpace = ColorSpace> extends Array<num
         return this.alpha === 0;
     }
 
-    bytes(): Vector3 {
-        return this.map(Color.scalar_to_byte) as Vector3;
+    bytes(): Vector<4> {
+        return this.map(Color.scalar_to_byte) as Vector<4>;
     }
 
-    bits(bit_depth: number): Vector3 {
-        return this.map(v => Color.scalar_to_bits(v, bit_depth)) as Vector3;
+    bits(bit_depth: number): Vector<4> {
+        return this.map(v => Color.scalar_to_bits(v, bit_depth)) as Vector<4>;
     }
 
     hex(): string {

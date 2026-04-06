@@ -40,25 +40,24 @@ export class Header extends Chunk<ChunkType.HEADER> {
 
     static from_data_bytes(data: ByteArray): Header {
         return new Header(
-            data.integer(0, 4),
-            data.integer(4, 4),
-            data.byte(8) as BitDepth,
-            data.byte(9),
-            data.byte(10),
-            data.byte(11),
-            data.byte(12),
+            data.read_uint32(),
+            data.read_uint32(),
+            data.read_byte() as BitDepth,
+            data.read_byte(),
+            data.read_byte(),
+            data.read_byte(),
+            data.read_byte(),
         );
     }
 
     override data_bytes(): ByteArray {
-        const bytes = new ByteArray(13);
-        bytes.set(this.width, 0, 4);
-        bytes.set(this.height, 4, 4);
-        bytes.set(this.bit_depth, 8, 1);
-        bytes.set(this.color_type, 9, 1);
-        bytes.set(this.compression_method, 10, 1);
-        bytes.set(this.filter_method, 11, 1);
-        bytes.set(this.interlace_method, 12, 1);
-        return bytes;
+        return new ByteArray(13)
+            .write_uint32(this.width)
+            .write_uint32(this.height)
+            .write_byte(this.bit_depth)
+            .write_byte(this.color_type)
+            .write_byte(this.compression_method)
+            .write_byte(this.filter_method)
+            .write_byte(this.interlace_method);
     }
 }

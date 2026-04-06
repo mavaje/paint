@@ -8,6 +8,8 @@ import {Unknown} from "./chunk/unknown";
 import {Data} from "./chunk/data";
 import {Background} from "./chunk/background";
 import {PNG} from "./png";
+import {LayerControl} from "./chunk/layer-control";
+import {LayerData} from "./chunk/layer-data";
 
 export class ChunkFactory {
 
@@ -21,6 +23,8 @@ export class ChunkFactory {
             [ChunkType.TRAILER]: Trailer,
             [ChunkType.TIME]: Time,
             [ChunkType.BACKGROUND]: Background,
+            [ChunkType.LAYER_CONTROL]: LayerControl,
+            [ChunkType.LAYER_DATA]: LayerData,
         }[type];
 
         if (constructor) {
@@ -32,6 +36,7 @@ export class ChunkFactory {
                 throw new Error('Trailer chunk must be last!');
             }
 
+            data.read_head = 0;
             const chunk = constructor.from_data_bytes(data, this.png) as Chunk;
 
             this.png.push_chunk(chunk);

@@ -16,16 +16,19 @@ export class Palette extends Chunk<ChunkType.PALETTE> {
             throw new Error(`Invalid palette length: ${data.length}`);
         }
 
-        return new Palette(
-            data.chunk_map(3, RGB.from_bytes),
-        );
+        const colours: Color[] = [];
+
+        while (data.has_more()) {
+            colours.push(RGB.from_bytes(data.read(3)));
+        }
+
+        return new Palette(colours);
     }
 
     override data_bytes(): ByteArray {
         const bytes = new ByteArray(this.colors.length * 3);
-        this.colors.forEach((color, i) => {
-            bytes.set(color.rgb().bytes(), i * 3);
-        });
+        this.colors.forEach(color =>
+            bytes.write(color.rgb().bytes().slice(0, 3)));
         return bytes;
     }
 }

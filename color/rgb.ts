@@ -19,12 +19,16 @@ export class RGB extends Color {
     get green() { return this[1]; }
     get blue() { return this[2]; }
 
-    static override from(rgb: number[]): RGB {
+    static override from(rgb: ArrayLike<number>): RGB {
         return new RGB(rgb, 'rgb');
     }
 
     static from_bytes(rgb: ArrayLike<number>): RGB {
         return RGB.from(Array.from(rgb, Color.byte_to_scalar));
+    }
+
+    static from_bits(rgb: ArrayLike<number>, bit_depth: number): RGB {
+        return RGB.from(Array.from(rgb, c => Color.bits_to_scalar(c, bit_depth)));
     }
 
     static from_hex(hex: string): RGB {
@@ -99,10 +103,8 @@ export class RGB extends Color {
 
     override greyscale(): Greyscale {
         const [r, g, b, a] = this;
-        return Greyscale.from([
-            0.299 * r + 0.587 * g + 0.114 * b,
-            a,
-        ]);
+        const v = 0.299 * r + 0.587 * g + 0.114 * b;
+        return Greyscale.from([v, a]);
     }
 
     override hsl(): HSL {
