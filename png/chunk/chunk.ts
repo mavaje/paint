@@ -9,6 +9,7 @@ import pako from "pako";
 import {Greyscale} from "../../color/greyscale";
 import {supports_float16_color} from "../../browser";
 import {Palette} from "./palette";
+import {mod} from "../../math";
 
 export enum ChunkType {
     HEADER = 'IHDR',
@@ -22,6 +23,37 @@ export enum ChunkType {
     LAYER_DATA = 'ldAt',
 }
 
+function filter(type: number, a: number, b: number, c: number): number {
+    switch (type) {
+        case 0:
+            return 0;
+        case 1:
+            return a;
+        case 2:
+            return b;
+        case 3:
+            return (a + b) >> 1;
+        case 4:
+            return paeth_predictor(a, b, c);
+        default:
+            throw new Error(`Invalid filter type ${type}`);
+    }
+}
+
+function paeth_predictor(a: number, b: number, c: number): number {
+    const p = a + b - c;
+    const pa = Math.abs(p - a);
+    const pb = Math.abs(p - b);
+    const pc = Math.abs(p - c);
+    if (pa <= pb && pa <= pc) {
+        return a;
+    } else if (pb <= pc) {
+        return b;
+    } else {
+        return c;
+    }
+}
+
 export abstract class Chunk<T extends ChunkType = ChunkType> {
 
     protected constructor(
@@ -32,11 +64,15 @@ export abstract class Chunk<T extends ChunkType = ChunkType> {
         return crc32.buf(new Uint8Array(bytes)) & 0xFFFFFFFF;
     }
 
-    static read_image_data(data: ByteArray, png: PNG): undefined | ImageData {
+    static read_image_data(data: ByteArray, png: PNG, options: {
+        decompress?: boolean,
+    } = {}): undefined | ImageData {
         const {width, bit_depth, color_type, interlace_method} = png.header();
 
-        // @ts-ignore
-        const raw = new ByteArray(pako.inflate(data));
+        let filtered = options.decompress ?? true
+            // @ts-ignore
+            ? new ByteArray(pako.inflate(data))
+            : data;
 
         const samples = {
             [ColorType.GREYSCALE]: 1,
@@ -48,10 +84,35 @@ export abstract class Chunk<T extends ChunkType = ChunkType> {
 
         const pixel_bits = bit_depth * samples;
         const pixel_bytes = pixel_bits / 8;
-        const scanline_length = 1 + Math.ceil(width * pixel_bytes);
-        const height = raw.length / scanline_length;
+        const scanline_bytes = Math.ceil(width * pixel_bytes);
+        const scanline_length = 1 + scanline_bytes;
+        const height = filtered.length / scanline_length;
 
         if (height === 0) return undefined;
+
+        const raw = new ByteArray(height * scanline_bytes);
+
+        const filter_offset = Math.max(1, pixel_bytes);
+
+        for (let y = 0; y < height; y++) {
+            filtered.read_head = y * scanline_length;
+            raw.write_head = y * scanline_bytes;
+
+            const filter_type = filtered.read_byte();
+
+            for (let x = 0; x < scanline_bytes; x++) {
+                const a = x >= filter_offset
+                    ? raw[y * scanline_bytes + x - filter_offset]
+                    : 0;
+                const b = y > 0
+                    ? raw[(y - 1) * scanline_bytes + x]
+                    : 0;
+                const c = x >= filter_offset && y > 0
+                    ? raw[(y - 1) * scanline_bytes + x - filter_offset]
+                    : 0;
+                raw.write_byte(mod(filtered.read_byte() + filter(filter_type, a, b, c), 256));
+            }
+        }
 
         const image_data = new ImageData(width, height, {
             pixelFormat: bit_depth > 8 && supports_float16_color()
@@ -63,10 +124,7 @@ export abstract class Chunk<T extends ChunkType = ChunkType> {
 
         for (let y = 0; y < height; y++) {
             raw.align_read_head();
-            const filter_type = raw.read_byte();
-            if (filter_type !== 0) {
-                throw new Error(`filter type ${filter_type} not supported (yet)!`)
-            }
+
             for (let x = 0; x < width; x++) {
                 if (interlace_method) {
 

@@ -11,12 +11,28 @@ import {PNG} from "./png";
 import {LayerControl} from "./chunk/layer-control";
 import {LayerData} from "./chunk/layer-data";
 import {Transparency} from "./chunk/transparency";
+import pako, {Inflate} from "pako";
 
 export class ChunkFactory {
 
+    private image_data_inflator: undefined | Inflate;
+
     constructor(protected png: PNG) {}
 
-    from_data<T extends ChunkType>(type: T, data: ByteArray): Chunk<T> {
+    from_data<T extends ChunkType>(type: T, data: ByteArray): void {
+        if (type === ChunkType.IMAGE_DATA) {
+            this.image_data_inflator ??= new pako.Inflate();
+            // @ts-ignore
+            this.image_data_inflator.push(data);
+
+            return;
+        } else if (this.image_data_inflator) {
+            const raw = new ByteArray(this.image_data_inflator.result as Uint8Array);
+            const data_chunk = Data.from_data_bytes(raw, this.png);
+
+            this.png.push_chunk(data_chunk);
+        }
+
         const constructor = {
             [ChunkType.HEADER]: Header,
             [ChunkType.TIME]: Time,
@@ -42,10 +58,8 @@ export class ChunkFactory {
             const chunk = constructor.from_data_bytes(data, this.png) as Chunk;
 
             this.png.push_chunk(chunk);
-
-            return chunk as Chunk<T>;
         } else {
-            return new Unknown(type, data);
+            this.png.push_chunk(new Unknown(type, data));
         }
     }
 }

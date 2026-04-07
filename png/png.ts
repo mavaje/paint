@@ -3,6 +3,7 @@ import {Chunk, ChunkType} from "./chunk/chunk";
 import {Header} from "./chunk/header";
 import {Palette} from "./chunk/palette";
 import {Transparency} from "./chunk/transparency";
+import {Data} from "./chunk/data";
 
 export class PNG {
 
@@ -49,6 +50,10 @@ export class PNG {
 
     transparency(): undefined | Transparency {
         return this.chunk(ChunkType.TRANSPARENCY);
+    }
+
+    image_data(): Data {
+        return this.chunk(ChunkType.IMAGE_DATA, true);
     }
 
     bytes() {

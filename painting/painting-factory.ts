@@ -2,18 +2,21 @@ import {event} from "../promises";
 import {Painting} from "./painting";
 import {PNGFactory} from "../png/png-factory";
 import {ChunkType} from "../png/chunk/chunk";
-import {Data} from "../png/chunk/data";
 import {LayerData} from "../png/chunk/layer-data";
 import {PNG} from "../png/png";
 import {ColorType} from "../png/chunk/header";
 import {Palette} from "./palette";
+import {stopwatch} from "../stopwatch";
 
 export class PaintingFactory {
 
     async from_file(file: File): Promise<Painting> {
+        stopwatch.start('loading painting from file');
         if (file.type === 'image/png') {
             const data = await file.bytes();
+            stopwatch.lap('PNG Data read');
             const png = new PNGFactory().from_data(data);
+            stopwatch.lap('PNG File parsed');
             return this.from_png(png);
         } else if (file.type.startsWith('image/')) {
             try {
@@ -21,14 +24,22 @@ export class PaintingFactory {
                 reader.readAsDataURL(file);
                 await event(reader, 'load', ['abort', 'error']);
 
+                stopwatch.lap('File reader loaded up');
+
                 const image = new Image();
                 image.src = reader.result as string;
                 await event(image, 'load', ['abort', 'error']);
 
+                stopwatch.lap('Image element loaded');
+
                 const painting = new Painting(image.width, image.height);
                 painting.add_layer().context.drawImage(image, 0, 0);
+
+                stopwatch.lap('Painting created');
+
                 return painting;
             } catch (error) {
+                console.log(error);
                 throw new Error('File seems corrupted!');
             }
         } else {
@@ -79,10 +90,11 @@ export class PaintingFactory {
             });
         } else {
             const layer = painting.add_layer();
-            (png.chunk_map[ChunkType.IMAGE_DATA] as undefined | Data[])?.forEach(({image_data, dx, dy}) => {
-                if (image_data) layer.context.putImageData(image_data, dx, dy);
-            });
+            const data = png.image_data();
+            if (data.image_data) layer.context.putImageData(data.image_data, 0, 0);
         }
+
+        stopwatch.lap('Painting created');
 
         return painting;
     }

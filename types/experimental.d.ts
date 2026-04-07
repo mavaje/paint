@@ -5,3 +5,7 @@ interface ImageData {
 interface ImageDataSettings {
     pixelFormat?: 'rgba-unorm8' | 'rgba-float16';
 }
+
+interface CanvasRenderingContext2DSettings {
+    colorType?: 'unorm8' | 'float16';
+}

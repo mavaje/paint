@@ -32,7 +32,7 @@ export class ByteArray extends Uint8ClampedArray {
 
     read_byte(offset = this.read_head): number {
         this.read_head = offset + 1;
-        return this[offset];
+        return this[offset] || 0;
     }
 
     read_uint16(offset = this.read_head): number {

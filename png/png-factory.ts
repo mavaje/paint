@@ -10,6 +10,7 @@ import {clamp} from "../math";
 import {Palette} from "./chunk/palette";
 import {Data} from "./chunk/data";
 import {Transparency} from "./chunk/transparency";
+import {stopwatch} from "../stopwatch";
 
 export class PNGFactory {
 
@@ -38,10 +39,7 @@ export class PNGFactory {
                 // throw new Error(`Incorrect CRC for chunk ${type}`);
             }
 
-            const chunk = chunk_factory.from_data(type, chunk_data);
-
-            console.log(`${chunk.type} (${length}):`);
-            console.log(chunk.data_bytes(png)?.toString());
+            chunk_factory.from_data(type, chunk_data);
 
             index += length + 12;
         }
@@ -50,6 +48,8 @@ export class PNGFactory {
     }
 
     from_painting(painting: Painting): PNG {
+        stopwatch.start('Loading PNG from painting');
+
         const png = new PNG();
 
         let bit_depth: BitDepth;
@@ -88,26 +88,20 @@ export class PNGFactory {
             png.push_chunk(new Palette(painting.palette.colors));
 
             if (painting.has_transparency) {
-                png.push_chunk(new Transparency(painting.palette.colors.map(c => c.alpha), undefined));
+                png.push_chunk(new Transparency(undefined));
             }
         }
 
-        png.push_chunk(new Data(painting.image_data({
-            pixelFormat: painting.color_depth > 8
-                ? 'rgba-float16'
-                : 'rgba-unorm8',
-        })));
+        png.push_chunk(new Data(painting.image_data()));
 
         if (painting.layers.length > 1) {
-            const image_data = painting.layers[0].image_data({
-                pixelFormat: painting.color_depth > 8
-                    ? 'rgba-float16'
-                    : 'rgba-unorm8',
-            });
+            const image_data = painting.layers[0].image_data();
             png.push_chunk(new Data(image_data));
         }
 
         png.push_chunk(new Trailer());
+
+        stopwatch.lap('Created PNG');
 
         return png;
     }

@@ -1,9 +1,12 @@
-import {Painting} from "./painting";
+import {Painting, PixelFilter} from "./painting";
+import {RGB} from "../color/rgb";
 
 export class Layer {
 
     readonly canvas: HTMLCanvasElement;
     readonly context: CanvasRenderingContext2D;
+
+    final: ImageData;
 
     blend_mode: GlobalCompositeOperation = 'source-over';
     opacity: number = 1;
@@ -18,11 +21,38 @@ export class Layer {
         this.canvas.height = height;
         this.context = this.canvas.getContext('2d', {
             alpha: painting.has_transparency,
+            colorType: painting.uses_float16_color()
+                ? 'float16'
+                : 'unorm8',
             willReadFrequently: true,
         }) as CanvasRenderingContext2D;
+        this.final = this.image_data();
     }
 
-    image_data(settings?: ImageDataSettings): ImageData {
-        return this.context.getImageData(0, 0, this.width, this.height, settings);
+    filter(filter: PixelFilter, apply = false) {
+        const image_data = this.image_data();
+        let colour;
+        for (let y = 0; y < this.height; y++) {
+            for (let x = 0; x < this.width; x++) {
+                const offset = (y * this.width + x) * 4;
+                const rgba = image_data.data.subarray(offset, offset + 4);
+                colour = image_data.pixelFormat === 'rgba-float16'
+                    ? RGB.from(rgba)
+                    : RGB.from_bytes(rgba);
+                colour = filter(colour, x, y);
+                image_data.data.set(
+                    image_data.pixelFormat === 'rgba-float16'
+                    ? colour
+                    : colour.bytes(),
+                    offset,
+                );
+            }
+        }
+        this.context.putImageData(image_data, 0, 0);
+        if (apply) this.final = image_data;
+    }
+
+    image_data(): ImageData {
+        return this.context.getImageData(0, 0, this.width, this.height, this.painting.image_data_settings());
     }
 }
