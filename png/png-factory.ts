@@ -9,6 +9,7 @@ import {Painting} from "../painting/painting";
 import {clamp} from "../math";
 import {Palette} from "./chunk/palette";
 import {Data} from "./chunk/data";
+import {Transparency} from "./chunk/transparency";
 
 export class PNGFactory {
 
@@ -40,7 +41,7 @@ export class PNGFactory {
             const chunk = chunk_factory.from_data(type, chunk_data);
 
             console.log(`${chunk.type} (${length}):`);
-            console.log(chunk.data_bytes(png).toString());
+            console.log(chunk.data_bytes(png)?.toString());
 
             index += length + 12;
         }
@@ -85,6 +86,10 @@ export class PNGFactory {
 
         if (painting.palette) {
             png.push_chunk(new Palette(painting.palette.colors));
+
+            if (painting.has_transparency) {
+                png.push_chunk(new Transparency(painting.palette.colors.map(c => c.alpha), undefined));
+            }
         }
 
         png.push_chunk(new Data(painting.image_data({

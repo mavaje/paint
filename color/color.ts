@@ -38,10 +38,10 @@ export abstract class Color<S extends ColorSpace = ColorSpace> extends Vector<4>
                 values[0] ?? 0,
                 values[1] ?? 0,
                 values[2] ?? 0,
-                values[3] ?? 0,
+                values[3] ?? 1,
             );
         } else {
-            super(0, 0, 0, 0);
+            super(0, 0, 0, 1);
         }
         this.space = space;
     }

@@ -1,10 +1,13 @@
 import {PNGFactory} from "./png/png-factory";
 import {PaintingFactory} from "./painting/painting-factory";
+import {RGB} from "./color/rgb";
 // import {Palette} from "./painting/palette";
 // import { RGB } from "./color/rgb";
 
 const file_input = document.getElementById('file-input') as HTMLInputElement;
 const file_output = document.getElementById('file-output') as HTMLAnchorElement;
+
+console.log(RGB.from([1,0,1]).hex());
 
 file_input.addEventListener('input', async () => {
     const file = file_input.files?.[0];

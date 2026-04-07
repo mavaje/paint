@@ -1,28 +1,29 @@
 import {Chunk, ChunkType} from "./chunk";
 import {ByteArray} from "../../byte-array";
 import {Color} from "../../color/color";
-import {ColorType} from "./header";
 import {RGB} from "../../color/rgb";
 import {PNG} from "../png";
+import {ColorType} from "./header";
 import {Greyscale} from "../../color/greyscale";
 
-export class Background extends Chunk<ChunkType.BACKGROUND> {
+export class Transparency extends Chunk<ChunkType.TRANSPARENCY> {
 
     constructor(
-        public background: Color,
+        public transparent_color: undefined | Color,
     ) {
-        super(ChunkType.BACKGROUND);
+        super(ChunkType.TRANSPARENCY);
     }
 
-    static from_data_bytes(data: ByteArray, png: PNG): Background {
+    static from_data_bytes(data: ByteArray, png: PNG): Transparency {
         const {color_type, bit_depth} = png.header();
+
         switch (color_type) {
             case ColorType.GREYSCALE:
             case ColorType.GREYSCALE_ALPHA: {
                 const color = Greyscale.from_bits([
                     data.read_uint16(),
                 ], bit_depth);
-                return new Background(color);
+                return new Transparency(color);
             }
 
             case ColorType.TRUECOLOR:
@@ -32,41 +33,45 @@ export class Background extends Chunk<ChunkType.BACKGROUND> {
                     data.read_uint16(),
                     data.read_uint16(),
                 ], bit_depth);
-                return new Background(color);
+                return new Transparency(color);
             }
 
             case ColorType.INDEXED_COLOR: {
                 const palette = png.palette(true);
-                const index = data.read_byte();
-                const color = palette.colors[index];
-                return new Background(color);
+
+                for (let i = 0; i < palette.colors.length && data.has_more(); i++) {
+                    palette.colors[i][3] = Color.byte_to_scalar(data.read_byte());
+                }
+
+                return new Transparency(undefined);
             }
         }
     }
 
-    override data_bytes(png: PNG): ByteArray {
+    override data_bytes(png: PNG): undefined | ByteArray {
         const {color_type, bit_depth} = png.header();
         switch (color_type) {
-            case ColorType.GREYSCALE:
-            case ColorType.GREYSCALE_ALPHA: {
-                const [value] = this.background.greyscale().bits(bit_depth);
+            case ColorType.GREYSCALE: {
+                if (!this.transparent_color) return undefined;
+                const [value] = this.transparent_color.greyscale().bits(bit_depth);
                 return new ByteArray(2)
                     .write_uint16(value);
             }
 
-            case ColorType.TRUECOLOR:
-            case ColorType.TRUECOLOR_ALPHA: {
-                const rgb= this.background.rgb().bits(bit_depth);
+            case ColorType.TRUECOLOR: {
+                if (!this.transparent_color) return undefined;
+                const rgb = this.transparent_color.rgb().bits(bit_depth);
                 return new ByteArray(6)
                     .write_uint16s(rgb);
             }
 
             case ColorType.INDEXED_COLOR: {
                 const palette = png.palette(true);
-                const index = Color.nearest_index(palette.colors, this.background);
-                return new ByteArray(1)
-                    .write_byte(index);
+                return new ByteArray(palette.colors.length)
+                    .write(palette.colors.map(color => color.bytes()[3]));
             }
         }
+
+        return undefined;
     }
 }

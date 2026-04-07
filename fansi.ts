@@ -97,7 +97,7 @@ type FansiFont<O extends string = never> =
     FontSet<Weight, O> &
     FontColor<O> &
     FontBackground<O> &
-    ((text: string|TemplateStringsArray, ...args: any[]) => string);
+    ((text: string | TemplateStringsArray, ...args: any[]) => string);
 
 function escape(...codes: number[]) {
     return codes.length > 0 ? `\x1b[${codes.map(Math.floor).join(';')}m` : '';
@@ -112,7 +112,7 @@ function hex_to_rgb(hex: string): [number, number, number] {
 function make_fansi(...codes: number[]): FansiFont {
     const escape_code = escape(...codes);
 
-    const fansi = function(text: string|TemplateStringsArray, ...args: any[]) {
+    const fansi = function(text: string | TemplateStringsArray, ...args: any[]) {
         if (Array.isArray(text)) {
             text = text.reduce((string, part, i) => string + part + (args[i] ?? ''), '');
         }

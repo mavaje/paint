@@ -8,12 +8,14 @@ import {Color} from "../../color/color";
 import pako from "pako";
 import {Greyscale} from "../../color/greyscale";
 import {supports_float16_color} from "../../browser";
+import {Palette} from "./palette";
 
 export enum ChunkType {
     HEADER = 'IHDR',
     PALETTE = 'PLTE',
     IMAGE_DATA = 'IDAT',
     TRAILER = 'IEND',
+    TRANSPARENCY = 'tRNS',
     TIME = 'tIME',
     BACKGROUND = 'bKGD',
     LAYER_CONTROL = 'lcTl',
@@ -30,7 +32,7 @@ export abstract class Chunk<T extends ChunkType = ChunkType> {
         return crc32.buf(new Uint8Array(bytes)) & 0xFFFFFFFF;
     }
 
-    static read_image_data(data: ByteArray, png: PNG): undefined|ImageData {
+    static read_image_data(data: ByteArray, png: PNG): undefined | ImageData {
         const {width, bit_depth, color_type, interlace_method} = png.header();
 
         // @ts-ignore
@@ -56,6 +58,8 @@ export abstract class Chunk<T extends ChunkType = ChunkType> {
                 ? 'rgba-float16'
                 : 'rgba-unorm8'
         });
+
+        const palette = png.palette(color_type === ColorType.INDEXED_COLOR);
 
         for (let y = 0; y < height; y++) {
             raw.align_read_head();
@@ -88,8 +92,7 @@ export abstract class Chunk<T extends ChunkType = ChunkType> {
                         break;
 
                     case ColorType.INDEXED_COLOR:
-                        const palette = png.palette();
-                        color = palette.colors[channels[0]];
+                        color = (palette as Palette).colors[channels[0]];
                         break;
                 }
 
@@ -125,6 +128,9 @@ export abstract class Chunk<T extends ChunkType = ChunkType> {
         const raw_length = height * scanline_length;
         const raw = new ByteArray(raw_length);
 
+        const palette = png.palette(color_type === ColorType.INDEXED_COLOR);
+        // const transparency = png.transparency();
+
         for (let y = 0; y < height; y++) {
             raw.align_write_head();
             raw.write_byte(0);
@@ -154,8 +160,7 @@ export abstract class Chunk<T extends ChunkType = ChunkType> {
                         break;
 
                     case ColorType.INDEXED_COLOR:
-                        const palette = png.palette();
-                        const index = Color.nearest_index(palette.colors, color)
+                        const index = Color.nearest_index((palette as Palette).colors, color);
                         raw.write_uint(index, bit_depth);
                         break;
                 }
@@ -168,6 +173,8 @@ export abstract class Chunk<T extends ChunkType = ChunkType> {
 
     bytes(png: PNG): ByteArray {
         const data = this.data_bytes(png);
+        if (!data) return new ByteArray(0);
+
         const bytes = new ByteArray(data.length + 12);
 
         bytes.write_uint32(data.length);
@@ -178,5 +185,5 @@ export abstract class Chunk<T extends ChunkType = ChunkType> {
         return bytes;
     }
 
-    abstract data_bytes(png: PNG): ByteArray;
+    abstract data_bytes(png: PNG): undefined | ByteArray;
 }

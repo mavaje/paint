@@ -2,6 +2,7 @@ import {ByteArray} from "../byte-array";
 import {Chunk, ChunkType} from "./chunk/chunk";
 import {Header} from "./chunk/header";
 import {Palette} from "./chunk/palette";
+import {Transparency} from "./chunk/transparency";
 
 export class PNG {
 
@@ -24,24 +25,30 @@ export class PNG {
         return (this.chunk_map[type]?.length ?? 0) > 0;
     }
 
-    header(): Header {
-        const header = this.chunk_map[ChunkType.HEADER]?.[0];
+    private chunk<C extends Chunk<ChunkType>>(type: C extends Chunk<infer T> ? T : never, force: true): C;
+    private chunk<C extends Chunk<ChunkType>>(type: C extends Chunk<infer T> ? T : never, force?: boolean): undefined | C;
+    private chunk<C extends Chunk<ChunkType>>(type: C extends Chunk<infer T> ? T : never, force: boolean = false): undefined | C {
+        const chunk = this.chunk_map[type]?.[0];
 
-        if (!header) {
-            throw new Error('Header chunk must be first!');
+        if (force && !chunk) {
+            throw new Error(`Chunk of type ${type} is not defined!`);
         }
 
-        return header as Header;
+        return chunk as Chunk as C;
     }
 
-    palette(): Palette {
-        const palette = this.chunk_map[ChunkType.PALETTE]?.[0];
+    header(): Header {
+        return this.chunk(ChunkType.HEADER, true);
+    }
 
-        if (!palette) {
-            throw new Error('Palette chunk is not defined!');
-        }
+    palette(force: true): Palette;
+    palette(force?: boolean): undefined | Palette;
+    palette(force: boolean = false): undefined | Palette {
+        return this.chunk(ChunkType.PALETTE, force);
+    }
 
-        return palette as Palette;
+    transparency(): undefined | Transparency {
+        return this.chunk(ChunkType.TRANSPARENCY);
     }
 
     bytes() {

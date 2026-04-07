@@ -4,7 +4,7 @@ import {Palette} from "./palette";
 export class Painting {
 
     layers: Layer[] = [];
-    palette: undefined|Palette;
+    palette: undefined | Palette;
     has_transparency: boolean = true;
     is_greyscale: boolean = false;
     color_depth: number = 8;

@@ -5,6 +5,8 @@ import {ChunkType} from "../png/chunk/chunk";
 import {Data} from "../png/chunk/data";
 import {LayerData} from "../png/chunk/layer-data";
 import {PNG} from "../png/png";
+import {ColorType} from "../png/chunk/header";
+import {Palette} from "./palette";
 
 export class PaintingFactory {
 
@@ -35,9 +37,38 @@ export class PaintingFactory {
     }
 
     from_png(png: PNG): Painting {
-        const {width, height} = png.header();
+        const {width, height, bit_depth, color_type} = png.header();
 
         const painting = new Painting(width, height);
+
+        painting.color_depth = bit_depth;
+
+        switch (color_type) {
+            case ColorType.GREYSCALE:
+                painting.is_greyscale = true;
+                painting.has_transparency = false;
+                break;
+
+            case ColorType.GREYSCALE_ALPHA:
+                painting.is_greyscale = true;
+                painting.has_transparency = true;
+                break;
+
+            case ColorType.TRUECOLOR:
+                painting.is_greyscale = false;
+                painting.has_transparency = false;
+                break;
+
+            case ColorType.TRUECOLOR_ALPHA:
+                painting.is_greyscale = false;
+                painting.has_transparency = true;
+                break;
+
+            case ColorType.INDEXED_COLOR:
+                const palette = new Palette(png.palette(true).colors);
+                painting.palette = palette;
+                break;
+        }
 
         if (png.has_chunk(ChunkType.LAYER_CONTROL)) {
             (png.chunk_map[ChunkType.LAYER_DATA] as undefined | LayerData[])?.forEach(layer_data => {

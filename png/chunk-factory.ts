@@ -10,6 +10,7 @@ import {Background} from "./chunk/background";
 import {PNG} from "./png";
 import {LayerControl} from "./chunk/layer-control";
 import {LayerData} from "./chunk/layer-data";
+import {Transparency} from "./chunk/transparency";
 
 export class ChunkFactory {
 
@@ -18,13 +19,14 @@ export class ChunkFactory {
     from_data<T extends ChunkType>(type: T, data: ByteArray): Chunk<T> {
         const constructor = {
             [ChunkType.HEADER]: Header,
-            [ChunkType.PALETTE]: Palette,
-            [ChunkType.IMAGE_DATA]: Data,
-            [ChunkType.TRAILER]: Trailer,
             [ChunkType.TIME]: Time,
+            [ChunkType.PALETTE]: Palette,
+            [ChunkType.TRANSPARENCY]: Transparency,
             [ChunkType.BACKGROUND]: Background,
+            [ChunkType.IMAGE_DATA]: Data,
             [ChunkType.LAYER_CONTROL]: LayerControl,
             [ChunkType.LAYER_DATA]: LayerData,
+            [ChunkType.TRAILER]: Trailer,
         }[type];
 
         if (constructor) {
