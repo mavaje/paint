@@ -9,7 +9,7 @@ import {Greyscale} from "../../color/greyscale";
 export class Transparency extends Chunk<ChunkType.TRANSPARENCY> {
 
     constructor(
-        public transparent_color: undefined | Color,
+        public color: undefined | Color,
     ) {
         super(ChunkType.TRANSPARENCY);
     }
@@ -52,15 +52,15 @@ export class Transparency extends Chunk<ChunkType.TRANSPARENCY> {
         const {color_type, bit_depth} = png.header();
         switch (color_type) {
             case ColorType.GREYSCALE: {
-                if (!this.transparent_color) return undefined;
-                const [value] = this.transparent_color.greyscale().bits(bit_depth);
+                if (!this.color) return undefined;
+                const [value] = this.color.greyscale().bits(bit_depth);
                 return new ByteArray(2)
                     .write_uint16(value);
             }
 
             case ColorType.TRUECOLOR: {
-                if (!this.transparent_color) return undefined;
-                const rgb = this.transparent_color.rgb().bits(bit_depth);
+                if (!this.color) return undefined;
+                const rgb = this.color.rgb().bits(bit_depth);
                 return new ByteArray(6)
                     .write_uint16s(rgb);
             }
