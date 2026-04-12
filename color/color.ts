@@ -47,7 +47,7 @@ export abstract class Color<S extends ColorSpace = ColorSpace> extends Vector<4>
     }
 
     static scalar_to_bits(scalar: number, bit_depth: number): number {
-        return clamp(Math.floor(scalar * (1 << bit_depth)), 0, (1 << bit_depth) - 1);
+        return Math.round(clamp(scalar, 0, 1) * ((1 << bit_depth) - 1));
     }
 
     static scalar_to_byte(scalar: number): number {

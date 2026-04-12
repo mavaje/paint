@@ -2,11 +2,8 @@ import {Chunk, ChunkType} from "./chunk/chunk";
 import {ByteArray} from "../byte-array";
 import {Header} from "./chunk/header";
 import {Palette} from "./chunk/palette";
-import {Trailer} from "./chunk/trailer";
-import {Time} from "./chunk/time";
 import {Unknown} from "./chunk/unknown";
 import {Data} from "./chunk/data";
-import {Background} from "./chunk/background";
 import {PNG} from "./png";
 import {LayerControl} from "./chunk/layer-control";
 import {LayerData} from "./chunk/layer-data";
@@ -15,7 +12,7 @@ import pako, {Inflate} from "pako";
 
 export class ChunkFactory {
 
-    private image_data_inflator: undefined | Inflate;
+    private image_data_inflator?: Inflate;
 
     constructor(protected png: PNG) {}
 
@@ -33,17 +30,16 @@ export class ChunkFactory {
             this.png.push_chunk(data_chunk);
         }
 
-        const constructor = {
+        const constructor = ({
             [ChunkType.HEADER]: Header,
-            [ChunkType.TIME]: Time,
             [ChunkType.PALETTE]: Palette,
             [ChunkType.TRANSPARENCY]: Transparency,
-            [ChunkType.BACKGROUND]: Background,
             [ChunkType.IMAGE_DATA]: Data,
             [ChunkType.LAYER_CONTROL]: LayerControl,
             [ChunkType.LAYER_DATA]: LayerData,
-            [ChunkType.TRAILER]: Trailer,
-        }[type];
+        } as Partial<Record<ChunkType, {
+            from_data_bytes(data: ByteArray, png: PNG): Chunk;
+        }>>)[type];
 
         if (constructor) {
             if (type !== ChunkType.HEADER && !this.png.has_chunk(ChunkType.HEADER)) {

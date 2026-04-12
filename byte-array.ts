@@ -65,8 +65,20 @@ export class ByteArray extends Uint8ClampedArray {
         }
     }
 
-    read_chars(length: number, offset = this.read_head): string {
-        return String.fromCharCode(...this.slice(offset, offset + length));
+    read_char(offset?: number): string {
+        return String.fromCharCode(this.read_byte(offset));
+    }
+
+    read_chars(length?: number, offset?: number): string {
+        return String.fromCharCode(...this.read(length, offset));
+    }
+
+    read_terminated_chars(offset = this.read_head): string {
+        let string = '';
+        for (;this[offset] > 0 && offset < this.length; offset++) {
+            string += this.read_char(offset);
+        }
+        return string;
     }
 
     read(length?: number, offset = this.read_head): number[] {
@@ -156,11 +168,23 @@ export class ByteArray extends Uint8ClampedArray {
         return this;
     }
 
+    write_char(value: string, offset = this.write_head): this {
+        this.write_head = offset + 1;
+        this[offset] = value.charCodeAt(0);
+        return this;
+    }
+
     write_chars(value: string, offset = this.write_head): this {
         this.write_head = offset + value.length;
         for (let i = 0; i < value.length; i++) {
             this[offset + i] = value.charCodeAt(i);
         }
+        return this;
+    }
+
+    write_terminated_chars(value: string, offset?: number): this {
+        this.write_char(value, offset);
+        this.write_byte(0);
         return this;
     }
 

@@ -4,6 +4,8 @@ import {Header} from "./chunk/header";
 import {Palette} from "./chunk/palette";
 import {Transparency} from "./chunk/transparency";
 import {Data} from "./chunk/data";
+import {LayerControl} from "./chunk/layer-control";
+import {LayerData} from "./chunk/layer-data";
 
 export class PNG {
 
@@ -26,9 +28,9 @@ export class PNG {
         return (this.chunk_map[type]?.length ?? 0) > 0;
     }
 
-    private chunk<C extends Chunk<ChunkType>>(type: C extends Chunk<infer T> ? T : never, force: true): C;
-    private chunk<C extends Chunk<ChunkType>>(type: C extends Chunk<infer T> ? T : never, force?: boolean): undefined | C;
-    private chunk<C extends Chunk<ChunkType>>(type: C extends Chunk<infer T> ? T : never, force: boolean = false): undefined | C {
+    singleton_chunk<C extends Chunk<ChunkType>>(type: C extends Chunk<infer T> ? T : never, force: true): C;
+    singleton_chunk<C extends Chunk<ChunkType>>(type: C extends Chunk<infer T> ? T : never, force?: boolean): undefined | C;
+    singleton_chunk<C extends Chunk<ChunkType>>(type: C extends Chunk<infer T> ? T : never, force: boolean = false): undefined | C {
         const chunk = this.chunk_map[type]?.[0];
 
         if (force && !chunk) {
@@ -38,22 +40,42 @@ export class PNG {
         return chunk as Chunk as C;
     }
 
+    multiple_chunks<C extends Chunk<ChunkType>>(type: C extends Chunk<infer T> ? T : never, force: true): C[] & [C];
+    multiple_chunks<C extends Chunk<ChunkType>>(type: C extends Chunk<infer T> ? T : never, force?: boolean): C[];
+    multiple_chunks<C extends Chunk<ChunkType>>(type: C extends Chunk<infer T> ? T : never, force: boolean = false): C[] {
+        const chunks = this.chunk_map[type];
+
+        if (force && !chunks) {
+            throw new Error(`Chunk of type ${type} is not defined!`);
+        }
+
+        return chunks as Chunk[] as C[];
+    }
+
     header(): Header {
-        return this.chunk(ChunkType.HEADER, true);
+        return this.singleton_chunk(ChunkType.HEADER, true);
     }
 
     palette(force: true): Palette;
     palette(force?: boolean): undefined | Palette;
     palette(force: boolean = false): undefined | Palette {
-        return this.chunk(ChunkType.PALETTE, force);
+        return this.singleton_chunk(ChunkType.PALETTE, force);
     }
 
     transparency(): undefined | Transparency {
-        return this.chunk(ChunkType.TRANSPARENCY);
+        return this.singleton_chunk(ChunkType.TRANSPARENCY);
     }
 
     image_data(): Data {
-        return this.chunk(ChunkType.IMAGE_DATA, true);
+        return this.singleton_chunk(ChunkType.IMAGE_DATA, true);
+    }
+
+    layer_control(): undefined | LayerControl {
+        return this.singleton_chunk(ChunkType.LAYER_CONTROL);
+    }
+
+    layer_data(): LayerData[] {
+        return this.multiple_chunks(ChunkType.LAYER_DATA);
     }
 
     bytes() {

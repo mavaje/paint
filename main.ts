@@ -1,4 +1,4 @@
-import {PNGFactory} from "./png/png-factory";
+// import {PNGFactory} from "./png/png-factory";
 import {PaintingFactory} from "./painting/painting-factory";
 // import {stopwatch} from "./stopwatch";
 // import {Palette} from "./painting/palette";
@@ -28,10 +28,10 @@ file_input.addEventListener('input', async () => {
         console.log(painting);
         document.body.append(painting.layers[0].canvas);
 
-        const png_factory = new PNGFactory();
-        const png = png_factory.from_painting(painting);
+        // const png_factory = new PNGFactory();
+        // png_factory.from_painting(painting);
 
-        console.log(png);
+        // console.log(png);
 
         // stopwatch.start('Creating download URL');
         //

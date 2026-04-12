@@ -2,7 +2,7 @@ import crc32 from "crc-32";
 
 import {ByteArray} from "../../byte-array";
 import {PNG} from "../png";
-import {ColorType} from "./header";
+import {ColorType, InterlaceMethod} from "./header";
 import {RGB} from "../../color/rgb";
 import {Color} from "../../color/color";
 import pako from "pako";
@@ -17,10 +17,14 @@ export enum ChunkType {
     IMAGE_DATA = 'IDAT',
     TRAILER = 'IEND',
     TRANSPARENCY = 'tRNS',
-    TIME = 'tIME',
+    HISTOGRAM = 'hIST',
     BACKGROUND = 'bKGD',
-    LAYER_CONTROL = 'lcTl',
-    LAYER_DATA = 'ldAt',
+    TEXT= 'tEXt',
+    COMPRESSED_TEXT= 'zTXt',
+    INTERNATIONAL_TEXT= 'zTXt',
+    TIME = 'tIME',
+    LAYER_CONTROL = 'lcTL',
+    LAYER_DATA = 'ldAT',
 }
 
 function filter(type: number, a: number, b: number, c: number): number {
@@ -52,6 +56,42 @@ function paeth_predictor(a: number, b: number, c: number): number {
     } else {
         return c;
     }
+}
+
+type Pass = {
+    px: number;
+    py: number;
+    ox: number;
+    oy: number;
+    x_count: number;
+    y_count: number;
+    threshold: number;
+    count: number;
+}
+
+function interlace_passes(width: number, height: number): Pass[] {
+    let threshold: number = 0;
+    return [
+        {px: 8, py: 8, ox: 0, oy: 0},
+        {px: 8, py: 8, ox: 4, oy: 0},
+        {px: 4, py: 8, ox: 0, oy: 4},
+        {px: 4, py: 4, ox: 2, oy: 0},
+        {px: 2, py: 4, ox: 0, oy: 2},
+        {px: 2, py: 2, ox: 1, oy: 0},
+        {px: 1, py: 2, ox: 0, oy: 1},
+    ].map(({px, py, ox, oy}) => {
+        const x_count = Math.floor((width + px - ox - 1) / px);
+        const y_count = Math.floor((height + py - oy - 1) / py);
+        const count = x_count * y_count;
+        threshold += count;
+        return {
+            px, py,
+            ox, oy,
+            x_count, y_count,
+            threshold,
+            count,
+        };
+    });
 }
 
 export abstract class Chunk<T extends ChunkType = ChunkType> {
@@ -122,15 +162,14 @@ export abstract class Chunk<T extends ChunkType = ChunkType> {
 
         const palette = png.palette(color_type === ColorType.INDEXED_COLOR);
 
+        const passes = interlace_passes(width, height);
+        let pass_index: number = 0;
+        let pass: Pass = passes[pass_index];
+
         for (let y = 0; y < height; y++) {
             raw.align_read_head();
 
             for (let x = 0; x < width; x++) {
-                if (interlace_method) {
-
-                } else {
-
-                }
 
                 const channels: number[] = [];
                 for (let c = 0; c < samples; c++) {
@@ -154,10 +193,23 @@ export abstract class Chunk<T extends ChunkType = ChunkType> {
                         break;
                 }
 
+                let pixel_index = y * width + x;
+                switch (interlace_method) {
+                    case InterlaceMethod.ADAM7:
+                        let index = y * width + x;
+                        if (index >= pass.threshold) {
+                            pass = passes[++pass_index];
+                        }
+                        const px = pass.px * (index % pass.x_count) + pass.ox;
+                        const py = pass.py * Math.floor(index / pass.x_count) + pass.oy;
+                        pixel_index = py * width + px;
+                        break;
+                }
+
                 if (image_data.pixelFormat === 'rgba-float16') {
-                    image_data.data.set(color.rgb(), (y * width + x) * 4);
+                    image_data.data.set(color.rgb(), pixel_index * 4);
                 } else {
-                    image_data.data.set(color.rgb().bytes(), (y * width + x) * 4);
+                    image_data.data.set(color.rgb().bytes(), pixel_index * 4);
                 }
             }
         }

@@ -3,10 +3,12 @@ import {RGB} from "../color/rgb";
 
 export class Layer {
 
+    name: string;
+
     readonly canvas: HTMLCanvasElement;
     readonly context: CanvasRenderingContext2D;
 
-    final: ImageData;
+    final?: ImageData;
 
     blend_mode: GlobalCompositeOperation = 'source-over';
     opacity: number = 1;
@@ -21,12 +23,11 @@ export class Layer {
         this.canvas.height = height;
         this.context = this.canvas.getContext('2d', {
             alpha: painting.has_transparency,
-            colorType: painting.uses_float16_color()
-                ? 'float16'
-                : 'unorm8',
+            colorType: 'float16',
             willReadFrequently: true,
         }) as CanvasRenderingContext2D;
         this.final = this.image_data();
+        this.name = `Layer ${painting.layers.length}`;
     }
 
     filter(filter: PixelFilter, apply = false) {
@@ -53,6 +54,6 @@ export class Layer {
     }
 
     image_data(): ImageData {
-        return this.context.getImageData(0, 0, this.width, this.height, this.painting.image_data_settings());
+        return this.final ?? this.context.getImageData(0, 0, this.width, this.height, this.painting.image_data_settings());
     }
 }

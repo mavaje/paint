@@ -9,7 +9,7 @@ import {Greyscale} from "../../color/greyscale";
 export class Transparency extends Chunk<ChunkType.TRANSPARENCY> {
 
     constructor(
-        public color: undefined | Color,
+        public color?: Color,
     ) {
         super(ChunkType.TRANSPARENCY);
     }

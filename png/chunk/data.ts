@@ -5,7 +5,7 @@ import {PNG} from "../png";
 export class Data extends Chunk<ChunkType.IMAGE_DATA> {
 
     constructor(
-        public image_data: undefined | ImageData,
+        public image_data?: ImageData,
     ) {
         super(ChunkType.IMAGE_DATA);
     }

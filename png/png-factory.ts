@@ -11,6 +11,8 @@ import {Palette} from "./chunk/palette";
 import {Data} from "./chunk/data";
 import {Transparency} from "./chunk/transparency";
 import {stopwatch} from "../stopwatch";
+import {LayerControl} from "./chunk/layer-control";
+import {LayerData} from "./chunk/layer-data";
 
 export class PNGFactory {
 
@@ -84,19 +86,52 @@ export class PNGFactory {
 
         png.push_chunk(new Time());
 
+        painting.source?.chunks.forEach(chunk => {
+            if (![
+                ChunkType.HEADER,
+                ChunkType.TIME,
+                ChunkType.PALETTE,
+                ChunkType.TRANSPARENCY,
+                ChunkType.IMAGE_DATA,
+                ChunkType.LAYER_CONTROL,
+                ChunkType.LAYER_DATA,
+                ChunkType.TRAILER,
+            ].includes(chunk.type)) {
+                png.push_chunk(chunk);
+            }
+        });
+
         if (painting.palette) {
             png.push_chunk(new Palette(painting.palette.colors));
 
             if (painting.has_transparency) {
-                png.push_chunk(new Transparency(undefined));
+                png.push_chunk(new Transparency());
             }
+        } else {
+            const transparency = painting.source?.transparency();
+            if (transparency) png.push_chunk(transparency);
         }
 
-        png.push_chunk(new Data(painting.image_data()));
+        const histogram = painting.source?.singleton_chunk(ChunkType.HISTOGRAM);
+        if (histogram) png.push_chunk(histogram);
+
+        const background = painting.source?.singleton_chunk(ChunkType.BACKGROUND);
+        if (background) png.push_chunk(background);
+
+        png.push_chunk(new Data(painting.flat_image_data()));
 
         if (painting.layers.length > 1) {
-            const image_data = painting.layers[0].image_data();
-            png.push_chunk(new Data(image_data));
+            png.push_chunk(new LayerControl(painting.layers.length));
+
+            painting.layers.forEach((layer, index) => {
+                png.push_chunk(new LayerData(
+                    index,
+                    layer.name,
+                    layer.opacity,
+                    layer.blend_mode,
+                    layer.image_data(),
+                ));
+            });
         }
 
         png.push_chunk(new Trailer());

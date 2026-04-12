@@ -1,8 +1,6 @@
 import {event} from "../promises";
 import {Painting} from "./painting";
 import {PNGFactory} from "../png/png-factory";
-import {ChunkType} from "../png/chunk/chunk";
-import {LayerData} from "../png/chunk/layer-data";
 import {PNG} from "../png/png";
 import {ColorType} from "../png/chunk/header";
 import {Palette} from "./palette";
@@ -50,7 +48,7 @@ export class PaintingFactory {
     from_png(png: PNG): Painting {
         const {width, height, bit_depth, color_type} = png.header();
 
-        const painting = new Painting(width, height);
+        const painting = new Painting(width, height, png);
 
         painting.color_depth = bit_depth;
 
@@ -81,8 +79,10 @@ export class PaintingFactory {
                 break;
         }
 
-        if (png.has_chunk(ChunkType.LAYER_CONTROL)) {
-            (png.chunk_map[ChunkType.LAYER_DATA] as undefined | LayerData[])?.forEach(layer_data => {
+        const layers = png.layer_data();
+
+        if (layers.length > 0) {
+            layers.forEach(layer_data => {
                 const layer = painting.add_layer(layer_data.layer_index);
                 layer.opacity = layer_data.opacity;
                 layer.blend_mode = layer_data.blend_mode;
